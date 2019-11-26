@@ -49,7 +49,7 @@ class L2_InterfacesFacts(object):
         objs = []
 
         if not data:
-            data = connection.get('show running-config | section ^interface')
+            data = connection.get('show running-config | include interface|description|switchport')
         # operate on a collection of resource x
         config = data.split('interface ')
         for conf in config:
