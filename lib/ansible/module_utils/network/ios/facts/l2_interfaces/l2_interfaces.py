@@ -82,20 +82,20 @@ class L2_InterfacesFacts(object):
 
         if get_interface_type(intf) == 'unknown':
             return {}
-
         if intf.upper()[:2] in ('HU', 'FO', 'TW', 'TE', 'GI', 'FA', 'ET', 'PO'):
             # populate the facts from the configuration
             config['name'] = normalize_interface(intf)
-
+            trunk = dict()
+            
+# Scans configuration of port for "switchport mode" and if access, puts in access bits, if trunk puts in trunk bits, if neither looks for other lines and potentially adds both.
             swport_mode = utils.parse_conf_arg(conf, 'switchport mode')
             if swport_mode == 'access':                
                 has_access = utils.parse_conf_arg(conf, 'switchport access vlan')
                 if has_access:
                     config["access"] = {"vlan": int(has_access),}
-            
-            trunk = dict()
-
-            if swport_mode == 'trunk': 
+                if not has_access:
+                    config["access"] = {"vlan": 1,}
+            elif swport_mode == 'trunk': 
                 trunk["encapsulation"] = utils.parse_conf_arg(conf, 'encapsulation')
                 native_vlan = utils.parse_conf_arg(conf, 'native vlan')
                 if native_vlan:
@@ -103,9 +103,28 @@ class L2_InterfacesFacts(object):
                 allowed_vlan = utils.parse_conf_arg(conf, 'allowed vlan')
                 if allowed_vlan:
                     trunk["allowed_vlans"] = allowed_vlan.split(',')
+                if not allowed_vlan:
+                    trunk["allowed_vlans"] = 'all'
                 pruning_vlan = utils.parse_conf_arg(conf, 'pruning vlan')
                 if pruning_vlan:
                     trunk['pruning_vlans'] = pruning_vlan.split(',')
+            else:
+                has_access = utils.parse_conf_arg(conf, 'switchport access vlan')
+                if has_access:
+                    config["access"] = {"vlan": int(has_access),}
+                trunk["encapsulation"] = utils.parse_conf_arg(conf, 'encapsulation')
+                if not has_access:
+                    native_vlan = utils.parse_conf_arg(conf, 'native vlan')
+                    if native_vlan:
+                        trunk["native_vlan"] = int(native_vlan)
+                    allowed_vlan = utils.parse_conf_arg(conf, 'allowed vlan')
+                    if allowed_vlan:
+                        trunk["allowed_vlans"] = allowed_vlan.split(',')
+                    if not allowed_vlan:
+                        trunk["allowed_vlans"] = 'all'
+                    pruning_vlan = utils.parse_conf_arg(conf, 'pruning vlan')
+                    if pruning_vlan:
+                        trunk['pruning_vlans'] = pruning_vlan.split(',')
 
             config['trunk'] = trunk
 
